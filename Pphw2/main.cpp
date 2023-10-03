@@ -293,9 +293,9 @@ public:
     }
 };
 
-    int main() {
-        TextEditor editor;
-        editor.menu();
-        return 0;
-    }
+int main() {
+    TextEditor editor;
+    editor.menu();
+    return 0;
+}
    
