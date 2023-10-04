@@ -5,38 +5,12 @@
 
 #define MAX_TEXT_SIZE 1024
 
-class TextEditor {
-private:
-    char text[MAX_TEXT_SIZE] = "";
-    char clipboard[MAX_TEXT_SIZE] = "";
-    std::stack<std::string> undoStack;
-    std::stack<std::string> redoStack;
 
-    void pushToUndo() {
-        undoStack.push(text);
-        while (!redoStack.empty()) {
-            redoStack.pop();
-        }
-    }
+class FileSveload {
+private:
+    char text[MAX_TEXT_SIZE];
 
 public:
-    void append_text() {
-        char input[100];
-        printf("Enter text to append: ");
-        fgets(input, sizeof(input), stdin);
-
-        size_t len = strlen(text);
-        strncat_s(text, sizeof(text), input, sizeof(text) - len - 1);
-
-        if (len + strlen(input) < sizeof(text) && text[len + strlen(input) - 1] == '\n') {
-            text[len + strlen(input) - 1] = '\0';
-        }
-    }
-
-    void start_new_line() {
-        strncat_s(text, sizeof(text), "\n", sizeof(text) - strlen(text) - 1);
-        printf("New line is started\n");
-    }
 
     void save_to_file() {
         char filename[100];
@@ -46,9 +20,8 @@ public:
             filename[strlen(filename) - 1] = '\0';
         }
 
-        FILE* file;
-        errno_t err = fopen_s(&file, filename, "w");
-        if (err != 0) {
+        FILE* file = fopen(filename, "w");
+        if (!file) {
             perror("Error opening file");
             return;
         }
@@ -66,9 +39,8 @@ public:
             filename[strlen(filename) - 1] = '\0';
         }
 
-        FILE* file;
-        errno_t err = fopen_s(&file, filename, "r");
-        if (err != 0) {
+        FILE* file = fopen(filename, "r");
+        if (!file) {
             perror("Error opening file");
             return;
         }
@@ -82,6 +54,41 @@ public:
 
         fclose(file);
         printf("Text has been loaded successfully\n");
+    }
+};
+class TextEditor {
+private:
+    FileSveload fileHandler;
+    char text[MAX_TEXT_SIZE] = "";
+    char clipboard[MAX_TEXT_SIZE] = "";
+    std::stack<std::string> undoStack;
+    std::stack<std::string> redoStack;
+
+    void pushToUndo() {
+        undoStack.push(text);
+        while (!redoStack.empty()) {
+            redoStack.pop();
+        }
+    }
+
+public:
+    TextEditor() : fileHandler(text) {}
+    void append_text() {
+        char input[100];
+        printf("Enter text to append: ");
+        fgets(input, sizeof(input), stdin);
+
+        size_t len = strlen(text);
+        strncat_s(text, sizeof(text), input, sizeof(text) - len - 1);
+
+        if (len + strlen(input) < sizeof(text) && text[len + strlen(input) - 1] == '\n') {
+            text[len + strlen(input) - 1] = '\0';
+        }
+    }
+
+    void start_new_line() {
+        strncat_s(text, sizeof(text), "\n", sizeof(text) - strlen(text) - 1);
+        printf("New line is started\n");
     }
 
     void print_text() {
@@ -186,7 +193,7 @@ public:
         }
     }
 
-    void insertWithReplacement(int position, const char* newText) {
+   void insertWithReplacement(int position, const char* newText) {
         pushToUndo();
 
         if (position > strlen(text)) {
@@ -230,13 +237,13 @@ public:
                 printf("1. Save to file\n");
                 printf("2. Load from file\n");
                 int file_choice;
-                scanf_s("%d", &file_choice);
+                scanf("%d", &file_choice);
                 while (getchar() != '\n');
                 if (file_choice == 1) {
-                    save_to_file();
+                    fileHandler.save_to_file();
                 }
                 else if (file_choice == 2) {
-                    load_from_file();
+                    fileHandler.load_from_file();
                 }
                 else {
                     printf("Invalid choice!\n");
