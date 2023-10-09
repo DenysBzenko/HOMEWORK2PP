@@ -59,11 +59,30 @@ public:
     }
 };
 
+class ClipboardManager {
+private:
+    char clipboard[MAX_TEXT_SIZE] = "";
+
+public:
+    void copy(const char* source, int start, int length) {
+        if (start + length > strlen(source)) {
+            length = strlen(source) - start;
+        }
+
+        strncpy_s(clipboard, sizeof(clipboard), source + start, length);
+        clipboard[length] = '\0';
+    }
+
+    const char* getClipboardContent() const {
+        return clipboard;
+    }
+};
+
 class TextEditor {
 private:
     char text[MAX_TEXT_SIZE] = "";
     FileSveload fileHandler;
-    char clipboard[MAX_TEXT_SIZE] = "";
+    ClipboardManager clipboardManager;
     std::stack<std::string> undoStack;
     std::stack<std::string> redoStack;
 
@@ -181,19 +200,12 @@ public:
             length = strlen(text) - start;
         }
 
-        strncpy_s(clipboard, sizeof(clipboard), text + start, length);
-        clipboard[length] = '\0';
-
+        clipboardManager.copy(text, start, length);
         strcpy_s(text + start, sizeof(text) - start, text + start + length);
     }
 
     void copy(int start, int length) {
-        if (start + length > strlen(text)) {
-            length = strlen(text) - start;
-        }
-
-        strncpy_s(clipboard, sizeof(clipboard), text + start, length);
-        clipboard[length] = '\0';
+        clipboardManager.copy(text, start, length);
     }
 
     void paste(int position) {
@@ -201,7 +213,7 @@ public:
 
         char temp[MAX_TEXT_SIZE];
         strcpy_s(temp, sizeof(temp), text + position);
-        strcpy_s(text + position, sizeof(text) - position, clipboard);
+        strcpy_s(text + position, sizeof(text) - position, clipboardManager.getClipboardContent());
         strcat_s(text, sizeof(text), temp);
     }
 
@@ -235,11 +247,10 @@ public:
         }
 
         char temp[MAX_TEXT_SIZE];
-        strcpy_s(temp, sizeof(temp), text + position); 
-        strcpy_s(text + position, sizeof(text) - position, newText); 
-        strcat_s(text, sizeof(text), temp); 
+        strcpy_s(temp, sizeof(temp), text + position);
+        strcpy_s(text + position, sizeof(text) - position, newText);
+        strcat_s(text, sizeof(text), temp);
     }
-
 
     void menu() {
         while (1) {
@@ -328,7 +339,7 @@ public:
                 scanf_s("%d", &start);
                 char replacement[MAX_TEXT_SIZE];
                 printf("Enter text to insert: ");
-                scanf_s("%s", replacement, MAX_TEXT_SIZE);
+                fgets(replacement, MAX_TEXT_SIZE, stdin);
                 insertWithReplacement(start, replacement);
                 break;
             default:
