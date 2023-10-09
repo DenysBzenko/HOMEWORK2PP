@@ -5,12 +5,12 @@
 
 #define MAX_TEXT_SIZE 1024
 
-
 class FileSveload {
 private:
-    char text[MAX_TEXT_SIZE];
+    char* text;
 
 public:
+    FileSveload(char* externalText) : text(externalText) {}
 
     void save_to_file() {
         char filename[100];
@@ -20,8 +20,9 @@ public:
             filename[strlen(filename) - 1] = '\0';
         }
 
-        FILE* file = fopen(filename, "w");
-        if (!file) {
+        FILE* file;
+        errno_t err = fopen_s(&file, filename, "w");
+        if (err != 0) {
             perror("Error opening file");
             return;
         }
@@ -39,8 +40,9 @@ public:
             filename[strlen(filename) - 1] = '\0';
         }
 
-        FILE* file = fopen(filename, "r");
-        if (!file) {
+        FILE* file;
+        errno_t err = fopen_s(&file, filename, "r");
+        if (err != 0) {
             perror("Error opening file");
             return;
         }
@@ -56,10 +58,11 @@ public:
         printf("Text has been loaded successfully\n");
     }
 };
+
 class TextEditor {
 private:
-    FileSveload fileHandler;
     char text[MAX_TEXT_SIZE] = "";
+    FileSveload fileHandler;
     char clipboard[MAX_TEXT_SIZE] = "";
     std::stack<std::string> undoStack;
     std::stack<std::string> redoStack;
@@ -73,6 +76,7 @@ private:
 
 public:
     TextEditor() : fileHandler(text) {}
+
     void append_text() {
         char input[100];
         printf("Enter text to append: ");
@@ -99,46 +103,76 @@ public:
         int line, index;
         char input[100];
 
-        printf("Choose line and index (starting from 0): ");
+        printf("Select a row and position (starting from 0): ");
         scanf_s("%d %d", &line, &index);
         while (getchar() != '\n');
 
-        printf("Enter text to insert: ");
+        printf("Enter the text to insert: ");
         fgets(input, sizeof(input), stdin);
 
-        char copy[MAX_TEXT_SIZE];
-        strcpy_s(copy, sizeof(copy), text);
-
         char* lines[MAX_TEXT_SIZE];
+        int lineCount = 0;
         char* context = NULL;
-        char* token = strtok_s(copy, "\n", &context);
-        int i = 0;
+        char* token = strtok_s(text, "\n", &context);
         while (token) {
-            lines[i++] = token;
+            lines[lineCount++] = token;
             token = strtok_s(NULL, "\n", &context);
         }
+
+        if (line >= lineCount) {
+            printf("Invalid line number!\n");
+            return;
+        }
+
+        char temp[MAX_TEXT_SIZE];
+        strcpy_s(temp, sizeof(temp), lines[line] + index);
+        strcpy_s(lines[line] + index, sizeof(lines[line]) - index, input);
+        strcat_s(lines[line], sizeof(lines[line]), temp);
+
+        int pos = 0;
+        for (int i = 0; i < lineCount; i++) {
+            strcpy_s(text + pos, sizeof(text) - pos, lines[i]);
+            pos += strlen(lines[i]);
+            text[pos++] = '\n';
+        }
+        text[pos] = '\0';
     }
 
     void delete_text_by_index() {
         int line, index, num_symbols;
-        printf("Choose line, index and number of symbols to delete: ");
+        printf("Select the line, position, and number of characters to delete: ");
         scanf_s("%d %d %d", &line, &index, &num_symbols);
         while (getchar() != '\n');
 
-        char copy[MAX_TEXT_SIZE];
-        strcpy_s(copy, sizeof(copy), text);
-
         char* lines[MAX_TEXT_SIZE];
+        int lineCount = 0;
         char* context = NULL;
-        char* token = strtok_s(copy, "\n", &context);
-        int i = 0;
+        char* token = strtok_s(text, "\n", &context);
         while (token) {
-            lines[i++] = token;
+            lines[lineCount++] = token;
             token = strtok_s(NULL, "\n", &context);
         }
+
+        if (line >= lineCount) {
+            printf("Invalid line number!\n");
+            return;
+        }
+
+        if (index + num_symbols > strlen(lines[line])) {
+            printf("Incorrect number of characters to delete!\n");
+            return;
+        }
+
+        strcpy_s(lines[line] + index, sizeof(lines[line]) - index, lines[line] + index + num_symbols);
+
+        int pos = 0;
+        for (int i = 0; i < lineCount; i++) {
+            strcpy_s(text + pos, sizeof(text) - pos, lines[i]);
+            pos += strlen(lines[i]);
+            text[pos++] = '\n';
+        }
+        text[pos] = '\0';
     }
-
-
 
     void cut(int start, int length) {
         pushToUndo();
@@ -193,28 +227,32 @@ public:
         }
     }
 
-   void insertWithReplacement(int position, const char* newText) {
+    void insertWithReplacement(int position, const char* newText) {
         pushToUndo();
 
         if (position > strlen(text)) {
             position = strlen(text);
         }
 
-        strcpy_s(text + position, sizeof(text) - position, newText);
+        char temp[MAX_TEXT_SIZE];
+        strcpy_s(temp, sizeof(temp), text + position); 
+        strcpy_s(text + position, sizeof(text) - position, newText); 
+        strcat_s(text, sizeof(text), temp); 
     }
+
 
     void menu() {
         while (1) {
             printf("Choose the command:\n");
-            printf("1. Append text symbols to the end\n");
-            printf("2. Start the new line\n");
-            printf("3. Use files to loading/saving the information\n");
-            printf("4. Print the current text to console\n");
-            printf("5. Insert the text by line and symbol index\n");
-            printf("6. Exit\n");
-            printf("7. Clear terminal.\n");
-            printf("8. Delete text\n");
-            printf("9. Cut\n");
+            printf(" 1. Append text symbols to the end\n");
+            printf(" 2. Start the new line\n");
+            printf(" 3. Use files to loading/saving the information\n");
+            printf(" 4. Print the current text to console\n");
+            printf(" 5. Insert the text by line and symbol index\n");
+            printf(" 6. Exit\n");
+            printf(" 7. Clear terminal.\n");
+            printf(" 8. Delete text\n");
+            printf(" 9. Cut\n");
             printf("10. Copy\n");
             printf("11. Paste\n");
             printf("12. Undo\n");
@@ -237,7 +275,7 @@ public:
                 printf("1. Save to file\n");
                 printf("2. Load from file\n");
                 int file_choice;
-                scanf("%d", &file_choice);
+                scanf_s("%d", &file_choice);
                 while (getchar() != '\n');
                 if (file_choice == 1) {
                     fileHandler.save_to_file();
@@ -290,7 +328,7 @@ public:
                 scanf_s("%d", &start);
                 char replacement[MAX_TEXT_SIZE];
                 printf("Enter text to insert: ");
-                scanf_s("%s", replacement);
+                scanf_s("%s", replacement, MAX_TEXT_SIZE);
                 insertWithReplacement(start, replacement);
                 break;
             default:
@@ -305,4 +343,3 @@ int main() {
     editor.menu();
     return 0;
 }
-   
