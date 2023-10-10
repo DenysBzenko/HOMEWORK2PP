@@ -252,6 +252,7 @@ public:
         strcat_s(text, sizeof(text), temp);
     }
 
+
     void menu() {
         while (1) {
             printf("Choose the command:\n");
@@ -337,9 +338,13 @@ public:
             case 14:
                 printf("Enter position to insert: ");
                 scanf_s("%d", &start);
+                while (getchar() != '\n');  
                 char replacement[MAX_TEXT_SIZE];
                 printf("Enter text to insert: ");
                 fgets(replacement, MAX_TEXT_SIZE, stdin);
+                if (replacement[strlen(replacement) - 1] == '\n') {
+                    replacement[strlen(replacement) - 1] = '\0'; 
+                }
                 insertWithReplacement(start, replacement);
                 break;
             default:
