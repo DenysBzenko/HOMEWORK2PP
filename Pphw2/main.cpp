@@ -85,6 +85,7 @@ private:
     ClipboardManager clipboardManager;
     std::stack<std::string> undoStack;
     std::stack<std::string> redoStack;
+    int cursorPosition = 0;
 
     void pushToUndo() {
         undoStack.push(text);
@@ -159,9 +160,11 @@ public:
 
     void delete_text_by_index() {
         int line, index, num_symbols;
-        printf("Select the line, position, and number of characters to delete: ");
+        printf("Select the line (starting from 1), position, and number of characters to delete: ");
         scanf_s("%d %d %d", &line, &index, &num_symbols);
         while (getchar() != '\n');
+
+        line--; 
 
         char* lines[MAX_TEXT_SIZE];
         int lineCount = 0;
@@ -182,16 +185,17 @@ public:
             return;
         }
 
-        strcpy_s(lines[line] + index, sizeof(lines[line]) - index, lines[line] + index + num_symbols);
+        memmove(lines[line] + index, lines[line] + index + num_symbols, strlen(lines[line]) - index - num_symbols + 1);
 
-        int pos = 0;
+        text[0] = '\0';
         for (int i = 0; i < lineCount; i++) {
-            strcpy_s(text + pos, sizeof(text) - pos, lines[i]);
-            pos += strlen(lines[i]);
-            text[pos++] = '\n';
+            strncat_s(text, sizeof(text), lines[i], _TRUNCATE);
+            if (i < lineCount - 1) {
+                strncat_s(text, sizeof(text), "\n", _TRUNCATE);
+            }
         }
-        text[pos] = '\0';
     }
+
 
     void cut(int start, int length) {
         pushToUndo();
@@ -251,6 +255,42 @@ public:
         strcpy_s(text + position, sizeof(text) - position, newText);
         strcat_s(text, sizeof(text), temp);
     }
+    void moveCursorLeft() {
+        if (cursorPosition > 0) {
+            cursorPosition--;
+        }
+    }
+
+    void moveCursorRight() {
+        if (cursorPosition < strlen(text)) {
+            cursorPosition++;
+        }
+    }
+
+    void moveCursorToStart() {
+        cursorPosition = 0;
+    }
+
+    void moveCursorToEnd() {
+        cursorPosition = strlen(text);
+    }
+
+    void insertAtCursor(const char* newText) {
+        pushToUndo();
+        char temp[MAX_TEXT_SIZE];
+        strcpy_s(temp, sizeof(temp), text + cursorPosition);
+        strcpy_s(text + cursorPosition, sizeof(text) - cursorPosition, newText);
+        strcat_s(text, sizeof(text), temp);
+        cursorPosition += strlen(newText);  
+    }
+
+    void deleteAtCursor(int num_symbols) {
+        pushToUndo();
+        if (cursorPosition + num_symbols > strlen(text)) {
+            num_symbols = strlen(text) - cursorPosition;
+        }
+        strcpy_s(text + cursorPosition, sizeof(text) - cursorPosition, text + cursorPosition + num_symbols);
+    }
 
 
     void menu() {
@@ -270,6 +310,12 @@ public:
             printf("12. Undo\n");
             printf("13. Redo\n");
             printf("14. Insert with replacement\n");
+            printf("15. Move cursor left\n");
+            printf("16. Move cursor right\n");
+            printf("17. Move cursor to start\n");
+            printf("18. Move cursor to end\n");
+            printf("19. Insert text at cursor\n");
+            printf("20. Delete text at cursor\n");
 
             int choice;
             scanf_s("%d", &choice);
@@ -347,6 +393,29 @@ public:
                 }
                 insertWithReplacement(start, replacement);
                 break;
+            case 15:
+                moveCursorLeft();
+                break;
+            case 16:
+                moveCursorRight();
+                break;
+            case 17:
+                moveCursorToStart();
+                break;
+            case 18:
+                moveCursorToEnd();
+                break;
+            case 19:
+                char input[100];
+                printf("Enter the text to insert at cursor: ");
+                fgets(input, sizeof(input), stdin);
+                insertAtCursor(input);
+                break;
+            case 20:
+                int num_symbols;
+                printf("Enter number of characters to delete at cursor: ");
+                scanf_s("%d", &num_symbols);
+                deleteAtCursor(num_symbols);
             default:
                 printf("Invalid choice!\n");
             }
