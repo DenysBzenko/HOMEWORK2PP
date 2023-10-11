@@ -159,13 +159,12 @@ public:
     }
 
     void delete_text_by_index() {
-        int line, index, num_symbols;
-        printf("Select the line (starting from 1), position, and number of characters to delete: ");
-        scanf_s("%d %d %d", &line, &index, &num_symbols);
-        while (getchar() != '\n');
+        int line, index, length;
+        printf("Select a row, position (starting from 0) and length for deletion: ");
+        scanf_s("%d %d %d", &line, &index, &length);
+        while (getchar() != '\n');  // clear input buffer
 
-        line--; 
-
+        // Split the text into lines
         char* lines[MAX_TEXT_SIZE];
         int lineCount = 0;
         char* context = NULL;
@@ -180,21 +179,31 @@ public:
             return;
         }
 
-        if (index + num_symbols > strlen(lines[line])) {
-            printf("Incorrect number of characters to delete!\n");
+        size_t lineLength = strlen(lines[line]);
+        if (index + length > lineLength) {
+            length = lineLength - index;  // Adjust length to not go out of bounds
+        }
+
+        if (index >= lineLength || length <= 0) {
+            printf("Invalid position or length!\n");
             return;
         }
 
-        memmove(lines[line] + index, lines[line] + index + num_symbols, strlen(lines[line]) - index - num_symbols + 1);
+        // Delete the specified part
+        memmove(lines[line] + index, lines[line] + index + length, lineLength - index - length + 1);  // +1 for the null-terminator
 
-        text[0] = '\0';
+        // Reconstruct the text
+        int pos = 0;
         for (int i = 0; i < lineCount; i++) {
-            strncat_s(text, sizeof(text), lines[i], _TRUNCATE);
-            if (i < lineCount - 1) {
-                strncat_s(text, sizeof(text), "\n", _TRUNCATE);
-            }
+            strcpy_s(text + pos, sizeof(text) - pos, lines[i]);
+            pos += strlen(lines[i]);
+            text[pos++] = '\n';
         }
+        text[pos] = '\0';
+
+        printf("Text has been deleted successfully\n");
     }
+
 
 
     void cut(int start, int length) {
@@ -311,11 +320,11 @@ public:
             printf("13. Redo\n");
             printf("14. Insert with replacement\n");
             printf("15. Move cursor left\n");
-            printf("16. Move cursor right\n");
-            printf("17. Move cursor to start\n");
-            printf("18. Move cursor to end\n");
-            printf("19. Insert text at cursor\n");
-            printf("20. Delete text at cursor\n");
+        printf("16. Move cursor right\n");
+        printf("17. Move cursor to start\n");
+        printf("18. Move cursor to end\n");
+        printf("19. Insert text at cursor\n");
+        printf("20. Delete text at cursor\n");
 
             int choice;
             scanf_s("%d", &choice);
